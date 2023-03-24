@@ -95,20 +95,22 @@ def select_and_copy_code_block(code_blocks):
         print()
 
     while True:
-        selected = input(Fore.WHITE + "Enter the number of the code block you want to copy, or type 'cancel': ")
-        if selected.lower() == "cancel":
-            break
-
+        selected = input(Fore.WHITE + "Enter the number of the code block you want to copy, or press Enter to skip: ")
+        # if selected.lower() == "cancel":
+        #     break
         try:
             index = int(selected) - 1
             if 0 <= index < len(code_blocks):
                 pyperclip.copy(code_blocks[index])
                 print(Fore.GREEN + "Code block copied to clipboard.")
                 break
-            # else:
-            #     print(Fore.RED + "Invalid selection. Try again.")
+            else:
+                # break
+                print(Fore.RED + "Invalid selection. Try again.")
         except ValueError:
-            print(Fore.RED + "Invalid input. Try again.")
+            print(Fore.YELLOW + "Invalid selection. Not selecting anything.")
+            break
+            # print(Fore.RED + "Invalid input. Try again.")
 
 def highlight_input_line(text):
     highlighted_text = highlight_code(text)
