@@ -3,8 +3,9 @@ import re
 import openai
 import json
 import getpass
-from colorama import Fore, Back, Style, init
+import time
 import pyperclip
+from colorama import Fore, Back, Style, init
 from pygments import highlight
 from pygments.lexers import PythonLexer
 from pygments.formatters import TerminalFormatter
@@ -44,17 +45,30 @@ def send_prompt(prompt, model):
     )
     return response
 
+def highlight_code_blocks(text):
+    highlighted_text = re.sub(
+        r'(```(?:[a-zA-Z]*\n)?)([\s\S]*?)(```)|(?:`([^`]+)`)',
+        lambda match: (
+            f"{Back.BLACK}{Style.NORMAL}{match.group(2)}{Back.RESET}{Style.BRIGHT}" if match.group(4) is None
+            else f"{Back.BLACK}{Style.NORMAL}{match.group(4)}{Back.RESET}{Style.BRIGHT}"
+        ),
+        text
+    )
+    return highlighted_text
+
 # Function to print the response received from the chatbot model
 def print_response(response, selected_model):
     if 'choices' in response:
         print(Style.NORMAL + Fore.BLUE + selected_model +": ")
         content = response["choices"][0]["message"]["content"]
-        print(Style.BRIGHT + Fore.BLUE + content + "\n")
+        highlighted_content = highlight_code_blocks(content)
+        print(Style.BRIGHT + Fore.BLUE + highlighted_content + "\n")
         return content
     else:
         print(Fore.RED + "Unexpected API response:")
         print(json.dumps(response, indent=2))
         return None
+
 
 # Function to detect code blocks in the chatbot's response
 def detect_code_blocks(text):
@@ -92,18 +106,36 @@ def select_and_copy_code_block(code_blocks):
                 pyperclip.copy(code_blocks[index])
                 print(Fore.GREEN + "Code block copied to clipboard.")
                 break
-            else:
-                print(Fore.RED + "Invalid selection. Try again.")
+            # else:
+            #     print(Fore.RED + "Invalid selection. Try again.")
         except ValueError:
             print(Fore.RED + "Invalid input. Try again.")
 
-# Main function to run the GPT Terminal Prompt
+
+def multiline_input(prompt):
+    print(prompt, end="")
+    lines = []
+    while True:
+        line = input()
+        if not line.strip():
+            break
+
+        # Check if the clipboard content has changed
+        clipboard_content = pyperclip.paste()
+        if clipboard_content.count('\n') > 0 and line == clipboard_content.split('\n')[0]:
+            lines.extend(clipboard_content.split('\n')[1:])
+            time.sleep(0.5)  # Give the user time to release the keys after pasting
+        else:
+            lines.append(line)
+
+    print(Fore.YELLOW + "Please wait...")
+    return "\n".join(lines)
+
 def main():
-    # print(Fore.YELLOW + "Welcome to the GPT Terminal Prompt!")
     selected_model = select_model()
 
     while True:
-        prompt = input(Style.DIM + Fore.GREEN + username + ": " + Style.NORMAL)
+        prompt = multiline_input(Style.DIM + Fore.GREEN + username + ": " + Style.NORMAL)
         if prompt.lower() == "exit":
             break
 
