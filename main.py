@@ -45,12 +45,12 @@ def send_prompt(prompt, model):
     )
     return response
 
-def highlight_code_blocks(text):
+def highlight_code(text):
     highlighted_text = re.sub(
         r'(```(?:[a-zA-Z]*\n)?)([\s\S]*?)(```)|(?:`([^`]+)`)',
         lambda match: (
-            f"{Back.BLACK}{Style.NORMAL}{match.group(2)}{Back.RESET}{Style.BRIGHT}" if match.group(4) is None
-            else f"{Back.BLACK}{Style.NORMAL}{match.group(4)}{Back.RESET}{Style.BRIGHT}"
+            f"{match.group(1)}{Back.BLACK}{Style.BRIGHT}{match.group(2)}{Style.NORMAL}{Back.RESET}{match.group(3)}" if match.group(4) is None
+            else f"`{Back.BLACK}{Style.BRIGHT}{match.group(4)}{Style.NORMAL}{Back.RESET}`"
         ),
         text
     )
@@ -59,16 +59,15 @@ def highlight_code_blocks(text):
 # Function to print the response received from the chatbot model
 def print_response(response, selected_model):
     if 'choices' in response:
-        print(Style.NORMAL + Fore.BLUE + selected_model +": ")
+        print(Fore.BLUE + selected_model + ":")
         content = response["choices"][0]["message"]["content"]
-        highlighted_content = highlight_code_blocks(content)
-        print(Style.BRIGHT + Fore.BLUE + highlighted_content + "\n")
+        highlighted_content = highlight_code(content)
+        print(Fore.BLUE + highlighted_content + "\n")
         return content
     else:
         print(Fore.RED + "Unexpected API response:")
         print(json.dumps(response, indent=2))
         return None
-
 
 # Function to detect code blocks in the chatbot's response
 def detect_code_blocks(text):
@@ -111,21 +110,37 @@ def select_and_copy_code_block(code_blocks):
         except ValueError:
             print(Fore.RED + "Invalid input. Try again.")
 
+def highlight_input_line(text):
+    highlighted_text = highlight_code(text)
+    return f"{highlighted_text}"
 
 def multiline_input(prompt):
     print(prompt, end="")
     lines = []
+    first_line = True
     while True:
+        if first_line:
+            print(Fore.GREEN + username + ": ", end="")
+            first_line = False
+        else:
+            print("  ", end="")
         line = input()
+        highlighted_line = highlight_input_line(line)
+
         if not line.strip():
             break
 
         # Check if the clipboard content has changed
         clipboard_content = pyperclip.paste()
         if clipboard_content.count('\n') > 0 and line == clipboard_content.split('\n')[0]:
-            lines.extend(clipboard_content.split('\n')[1:])
+            highlighted_clipboard_content = highlight_input_line(clipboard_content)
+            lines.extend(highlighted_clipboard_content.split('\n')[1:])
             time.sleep(0.5)  # Give the user time to release the keys after pasting
         else:
+            if len(lines) == 0:
+                print(f"\033[1A{Fore.GREEN + username}: {highlighted_line}")  # Move the cursor up and print the highlighted line for the first line
+            else:
+                print(f"\033[1A  {highlighted_line}")  # Move the cursor up and print the highlighted line for subsequent lines
             lines.append(line)
 
     print(Fore.YELLOW + "Please wait...")
@@ -135,7 +150,7 @@ def main():
     selected_model = select_model()
 
     while True:
-        prompt = multiline_input(Style.DIM + Fore.GREEN + username + ": " + Style.NORMAL)
+        prompt = multiline_input(Style.DIM + Fore.GREEN)
         if prompt.lower() == "exit":
             break
 
